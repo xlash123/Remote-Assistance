@@ -1,23 +1,19 @@
 package xlash.rm.server;
 
 import java.awt.Point;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-
-import javax.imageio.ImageIO;
-
-import xlash.rm.client.Input;
 
 public class ServerPacket implements Serializable{
 	
 	public Point mouse;
 	public SendInput input;
+	public boolean processedFrame;
 	
-	public ServerPacket(Point mouse, SendInput input) throws IOException{
+	public ServerPacket(Point mouse, SendInput input, boolean processedFrame) throws IOException{
 		this.mouse = mouse;
 		this.input = input;
+		this.processedFrame = processedFrame;
 	}
 
 }
