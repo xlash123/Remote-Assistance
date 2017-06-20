@@ -10,13 +10,11 @@ import javax.imageio.ImageIO;
 public class ClientPacket implements Serializable{
 	
 	public byte[] byteArray;
-	public byte[] sound;
 	
-	public ClientPacket(BufferedImage img, ByteArrayOutputStream baos) throws IOException{
+	public ClientPacket(BufferedImage img) throws IOException{
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		ImageIO.write(img, "jpg", byteArrayOutputStream);
         this.byteArray = byteArrayOutputStream.toByteArray();
-        this.sound = baos.toByteArray();
 	}
 
 }
