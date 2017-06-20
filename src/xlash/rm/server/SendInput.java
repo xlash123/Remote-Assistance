@@ -2,7 +2,6 @@ package xlash.rm.server;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.BitSet;
 
 import xlash.rm.client.Input;
 
