@@ -6,7 +6,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.io.Serializable;
 import java.util.ArrayList;
 
 public class Input implements KeyListener, MouseListener, MouseWheelListener{
