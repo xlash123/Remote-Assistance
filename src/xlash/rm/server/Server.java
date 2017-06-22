@@ -10,8 +10,10 @@ public class Server{
 	
 	public ServerSocket server;
 	public User user;
+	private boolean helpWanted;
 
-	public Server(int port) throws IOException{
+	public Server(int port, boolean helpWanted) throws IOException{
+		this.helpWanted = helpWanted;
 		server = new ServerSocket(port);
 		Thread handshake = new Thread("Handshake"){
 			@Override
@@ -32,7 +34,7 @@ public class Server{
 				try {
 					Socket client = server.accept();
 					Window.error.setText("Connection with user.");
-					user = new User(client.getInputStream(), client.getOutputStream());
+					user = new User(client.getInputStream(), client.getOutputStream(), helpWanted);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

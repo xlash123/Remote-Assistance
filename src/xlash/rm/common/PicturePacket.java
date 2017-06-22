@@ -1,4 +1,4 @@
-package xlash.rm.server;
+package xlash.rm.common;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -7,11 +7,11 @@ import java.io.Serializable;
 
 import javax.imageio.ImageIO;
 
-public class ClientPacket implements Serializable{
+public class PicturePacket implements Serializable{
 	
 	public byte[] byteArray;
 	
-	public ClientPacket(BufferedImage img) throws IOException{
+	public PicturePacket(BufferedImage img) throws IOException{
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		ImageIO.write(img, "jpg", byteArrayOutputStream);
         this.byteArray = byteArrayOutputStream.toByteArray();

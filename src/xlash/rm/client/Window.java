@@ -12,6 +12,8 @@ import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -32,6 +34,7 @@ public class Window extends JFrame{
 	private JPanel panel;
 	
 	public static final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+	public static Dimension panelSize;
 	
 	public static Server server;
 	public static Client client;
@@ -60,9 +63,7 @@ public class Window extends JFrame{
 	public void tick(){
 		while(true){
 			if(panel != null && panel.getMousePosition() != null && display != null){
-				try{
-					mouse = new Point((int) (panel.getMousePosition().getX() * (display.getWidth() / ((double) panel.getWidth()))), (int) (panel.getMousePosition().getY() * (display.getHeight() / ((double) panel.getHeight()))));
-				} catch(NullPointerException e){}
+				mouse = panel.getMousePosition();
 			}
 			if(client != null && !client.connected){
 				client = null;
@@ -99,20 +100,44 @@ public class Window extends JFrame{
         panel.addMouseListener(input);
         panel.addMouseWheelListener(input);
         
+        this.panel.addComponentListener(new ComponentAdapter() {
+        	public void componentResized(ComponentEvent e){
+        		Window.panelSize = Window.this.panel.getSize();
+        	}
+		});
+        
         connect.addActionListener(new ActionListener(){
         	@Override
         	public void actionPerformed(ActionEvent arg0){
         		Thread connect = new Thread("Connect"){
         			@Override
         			public void run(){
-        				try {
-        					client = new Client(ip.getText());
-        					panel.requestFocus();
-        					Window.this.setGuiVisible(false);
-						} catch (NumberFormatException e) {
-							error.setText("Valid ports are between 0 and 65535.");
-						} catch (IOException e) {
-							error.setText("Server not found. Try again.");
+        				if(!ip.getText().contains(".") && !ip.getText().contains(":")){
+							try{
+							int port = Integer.parseInt(ip.getText());
+							if(port >= 0 && port <= 65535){
+								server = new Server(port, false);
+								error.setText("Server on port " + port + ".");
+								Window.this.setGuiVisible(false);
+							}else{
+								error.setText("Valid ports are between 0 and 65535.");
+								return;
+							}
+							}catch(NumberFormatException e){
+								error.setText("Valid ports are between 0 and 65535.");
+							}catch(IOException e){
+								error.setText("Unable to start server.");
+							}
+						}else{
+							try{
+								client = new Client(Window.this.ip.getText(), false);
+								panel.requestFocus();
+								Window.this.setGuiVisible(false);
+							}catch(NumberFormatException e){
+								error.setText("Valid ports are between 0 and 65535.");
+							}catch(IOException e){
+								error.setText("Server not found. Try again.");
+							}
 						}
         			}
         		};
@@ -123,31 +148,41 @@ public class Window extends JFrame{
         ask.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				if(server == null){
-					try{
-						int port = Integer.parseInt(ip.getText());
-						if(port >= 0 && port <= 65535){
-							server = new Server(port);
-							error.setText("Server on port " + port + ".");
-							Window.this.setGuiVisible(false);
+						if(!ip.getText().contains(".") && !ip.getText().contains(":")){
+							try{
+							int port = Integer.parseInt(ip.getText());
+							if(port >= 0 && port <= 65535){
+								server = new Server(port, true);
+								error.setText("Server on port " + port + ".");
+								Window.this.setGuiVisible(false);
+							}else{
+								error.setText("Valid ports are between 0 and 65535.");
+								return;
+							}
+							}catch(NumberFormatException e){
+								error.setText("Valid ports are between 0 and 65535.");
+							}catch(IOException e){
+								error.setText("Unable to start server.");
+							}
 						}else{
-							error.setText("Valid ports are between 0 and 65535.");
-							return;
+							try{
+								client = new Client(Window.this.ip.getText(), true);
+								panel.requestFocus();
+								Window.this.setGuiVisible(false);
+							}catch(NumberFormatException e){
+								error.setText("Valid ports are between 0 and 65535.");
+							}catch(IOException e){
+								error.setText("Server not found. Try again.");
+							}
 						}
-					}catch(NumberFormatException e){
-						error.setText("Valid ports are between 0 and 65535.");
-					}catch(IOException e){
-						error.setText("Unable to start server.");
 					}
-				}
-			}
         });
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        connect.setText("Connect");
+        connect.setText("I'll help");
 
-        ask.setText("Ask for Help");
+        ask.setText("I need help");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -185,7 +220,7 @@ public class Window extends JFrame{
 	
 	public void draw(Graphics2D g2d){
 		try {
-			if(client == null){
+			if(client == null && server == null){
 				display = new Robot().createScreenCapture(new Rectangle(screenSize));
 			}
 			g2d.drawImage(display, 0, 0, panel.getWidth(), panel.getHeight(), null);
