@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.util.Arrays;
 
 import javax.imageio.ImageIO;
@@ -26,11 +27,11 @@ public class User {
 	public ObjectInputStream in;
 	
 	public boolean connected;
-	private int[][] prevImage;
-	private boolean helpWanted;
+	protected int[][] prevImage;
+	protected boolean helpWanted;
 	
-	private volatile boolean clientProcessedFrame;
-	private volatile boolean processedFrame;
+	protected volatile boolean clientProcessedFrame;
+	protected volatile boolean processedFrame;
 	
 	public User(InputStream is, OutputStream os, boolean helpWanted) throws IOException{
 		this.helpWanted = helpWanted;
@@ -45,7 +46,7 @@ public class User {
 				listen();
 			}
 		};
-		Thread send = new Thread("Server Send"){
+		Thread send = new Thread("User Send"){
 			@Override
 			public void run(){
 				send();
@@ -53,7 +54,11 @@ public class User {
 		};
 		listen.start();
 		send.start();
-		System.out.println("Started server threads");
+		System.out.println("User threads");
+	}
+	
+	public User(Socket socket, boolean helpWanted) throws IOException, NumberFormatException{
+		this(socket.getInputStream(), socket.getOutputStream(), helpWanted);
 	}
 	
 	public void send(){
@@ -63,9 +68,16 @@ public class User {
 				if(helpWanted){
 					while(!clientProcessedFrame);
 					clientProcessedFrame = false;
-					BufferedImage screenshot = new Robot().createScreenCapture(new Rectangle(Window.screenSize));
-					out.writeObject(new PicturePacket(screenshot));
+					int[] newArray;
+					int[][] screenArray;
+					do{
+						BufferedImage screenshot = new Robot().createScreenCapture(new Rectangle(Window.screenSize));
+						screenArray = this.getRGBArray(screenshot);
+						newArray = getNewPixels(screenArray);
+					} while(newArray.length == 0);
+					out.writeObject(new PicturePacket(newArray));
 					out.flush();
+					prevImage = screenArray;
 				}else{
 					ControlPacket sp = new ControlPacket(Window.mouse, new SendInput(Window.input), Window.panelSize, processedFrame);
 					out.writeObject(sp);
@@ -105,17 +117,48 @@ public class User {
 		return Arrays.copyOf(almostResult, index);
 	}
 	
-	private int[][] getImageArray(BufferedImage img){
-		int width = img.getWidth();
-		int height = img.getHeight();
-		int[][] result = new int[width][height];
-		for(int h=0; h<height; h++){
-			for(int w=0; w<width; w++){
-				result[h][w] = img.getRGB(w, h);
-			}
-		}
-		return result;
-	}
+	private int[][] getRGBArray(BufferedImage image) {
+
+	      final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+	      final int width = image.getWidth();
+	      final int height = image.getHeight();
+	      final boolean hasAlphaChannel = image.getAlphaRaster() != null;
+
+	      int[][] result = new int[height][width];
+	      if (hasAlphaChannel) {
+	         final int pixelLength = 4;
+	         for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
+	            int argb = 0;
+	            argb += (((int) pixels[pixel] & 0xff) << 24); // alpha
+	            argb += ((int) pixels[pixel + 1] & 0xff); // blue
+	            argb += (((int) pixels[pixel + 2] & 0xff) << 8); // green
+	            argb += (((int) pixels[pixel + 3] & 0xff) << 16); // red
+	            result[row][col] = argb;
+	            col++;
+	            if (col == width) {
+	               col = 0;
+	               row++;
+	            }
+	         }
+	      } else {
+	         final int pixelLength = 3;
+	         for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
+	            int argb = 0;
+	            argb += -16777216; // 255 alpha
+	            argb += ((int) pixels[pixel] & 0xff); // blue
+	            argb += (((int) pixels[pixel + 1] & 0xff) << 8); // green
+	            argb += (((int) pixels[pixel + 2] & 0xff) << 16); // red
+	            result[row][col] = argb;
+	            col++;
+	            if (col == width) {
+	               col = 0;
+	               row++;
+	            }
+	         }
+	      }
+
+	      return result;
+	   }
 	
 	public void listen(){
 		boolean run = true;
@@ -129,7 +172,7 @@ public class User {
 					processedFrame = true;
 					PicturePacket packet = (PicturePacket) in.readObject();
 					processedFrame = false;
-					Window.display = ImageIO.read(new ByteArrayInputStream(packet.byteArray));
+					this.updateDisplay(packet.newPixels);
 				}
 			} catch (ClassNotFoundException e) {
 				run = false;
@@ -143,6 +186,12 @@ public class User {
 			}
 		}
 		connected = false;
+	}
+	
+	private void updateDisplay(int[] newPixels){
+		for(int i=0; i<newPixels.length; i++){
+			Window.display.setRGB(newPixels[i], newPixels[i+1], newPixels[i+2]);
+		}
 	}
 
 }
